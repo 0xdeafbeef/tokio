@@ -532,7 +532,28 @@ fn poll_future<T: Future, S: Schedule>(core: &Core<T, S>, cx: Context<'_>) -> Po
             }
         }
         let guard = Guard { core };
+
+        let start = std::time::Instant::now();
         let res = guard.core.poll(cx);
+        let elapsed = start.elapsed();
+
+        if elapsed.as_millis() > 100 {
+            let spawn_location = format!(
+                "{}:{}:{}",
+                core.spawned_at.file(),
+                core.spawned_at.line(),
+                core.spawned_at.column()
+            );
+
+            tracing::warn!(
+                future_type = %std::any::type_name::<T>(),
+                poll_duration_ms = %elapsed.as_millis(),
+                task_id = %core.task_id,
+                spawned_at = %spawn_location,
+                "slow poll"
+            );
+        }
+
         mem::forget(guard);
         res
     }));

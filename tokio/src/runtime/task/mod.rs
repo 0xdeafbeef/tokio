@@ -431,7 +431,6 @@ impl<S: 'static> Task<S> {
         unsafe { Header::get_id(self.raw.header_ptr()) }
     }
 
-    #[cfg(tokio_unstable)]
     pub(crate) fn spawned_at(&self) -> &'static Location<'static> {
         // Safety: The header pointer is valid.
         unsafe { Header::get_spawn_location(self.raw.header_ptr()) }
@@ -618,9 +617,7 @@ unsafe impl<S> sharded_list::ShardedListItem for Task<S> {
     }
 }
 
-/// Wrapper around [`std::panic::Location`] that's conditionally compiled out
-/// when `tokio_unstable` is not enabled.
-#[cfg(tokio_unstable)]
+/// Wrapper around [`std::panic::Location`]
 mod spawn_location {
 
     use std::panic::Location;
@@ -632,26 +629,6 @@ mod spawn_location {
         fn from(location: &'static Location<'static>) -> Self {
             Self(location)
         }
-    }
-}
-
-#[cfg(not(tokio_unstable))]
-mod spawn_location {
-    use std::panic::Location;
-
-    #[derive(Copy, Clone)]
-    pub(crate) struct SpawnLocation();
-
-    impl From<&'static Location<'static>> for SpawnLocation {
-        fn from(_: &'static Location<'static>) -> Self {
-            Self()
-        }
-    }
-
-    #[cfg(test)]
-    #[test]
-    fn spawn_location_is_zero_sized() {
-        assert_eq!(std::mem::size_of::<SpawnLocation>(), 0);
     }
 }
 
